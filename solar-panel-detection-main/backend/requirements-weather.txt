@@ -1,0 +1,7 @@
+# Weather API dependencies
+aiohttp>=3.8.0
+asyncio-throttle>=1.0.0
+
+# Add to existing requirements.txt:
+# aiohttp>=3.8.0
+# asyncio-throttle>=1.0.0

@@ -8,6 +8,7 @@ import { MapContainer, TileLayer, GeoJSON, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { getBuildingsInBBox, calculateBuildingSolarPotential, buildingsToGeoJSON } from '../services/buildingsAPI';
+import WeatherPanel from './WeatherPanel';
 
 // Fix Leaflet default marker icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -98,6 +99,8 @@ const BuildingsMap = () => {
   const [selectedBuilding, setSelectedBuilding] = useState(null);
   const [solarPotential, setSolarPotential] = useState(null);
   const [stats, setStats] = useState({ total: 0, displayed: 0 });
+  const [showWeather, setShowWeather] = useState(false);
+  const [weatherLocation, setWeatherLocation] = useState(null);
 
   // Bangkok center
   const center = [13.7563, 100.5018];
@@ -142,7 +145,22 @@ const BuildingsMap = () => {
     // Calculate solar potential (will try pvlib backend first, then fallback)
     const potential = await calculateBuildingSolarPotential(building);
     setSolarPotential(potential);
+    
+    // Set weather location for this building
+    setWeatherLocation({
+      lat: building.latitude,
+      lon: building.longitude
+    });
   }, []);
+
+  // Handle weather panel toggle
+  const handleWeatherToggle = () => {
+    if (!showWeather && !weatherLocation) {
+      // Default to Bangkok center if no building selected
+      setWeatherLocation({ lat: 13.7563, lon: 100.5018 });
+    }
+    setShowWeather(!showWeather);
+  };
 
   return (
     <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
@@ -215,7 +233,24 @@ const BuildingsMap = () => {
         zIndex: 1000,
         maxWidth: '300px'
       }}>
-        <h3 style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '8px' }}>Buildings Data</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <h3 style={{ fontWeight: 'bold', fontSize: '14px' }}>Buildings Data</h3>
+          <button
+            onClick={handleWeatherToggle}
+            style={{
+              padding: '4px 8px',
+              backgroundColor: showWeather ? '#3b82f6' : '#f3f4f6',
+              color: showWeather ? 'white' : '#6b7280',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+            title="Toggle weather forecast"
+          >
+            🌤️ Weather
+          </button>
+        </div>
         <div style={{ fontSize: '12px' }}>
           <p>Displayed: <span style={{ fontWeight: '600' }}>{stats.displayed.toLocaleString()}</span></p>
           <p>Total in view: <span style={{ fontWeight: '600' }}>{stats.total.toLocaleString()}</span></p>
@@ -226,6 +261,15 @@ const BuildingsMap = () => {
           )}
         </div>
       </div>
+
+      {/* Weather Panel */}
+      {showWeather && weatherLocation && (
+        <WeatherPanel
+          location={weatherLocation}
+          systemKwp={solarPotential?.systemSizeKWp}
+          onClose={() => setShowWeather(false)}
+        />
+      )}
 
       {/* Solar potential panel */}
       {selectedBuilding && solarPotential && (
@@ -271,7 +315,7 @@ const BuildingsMap = () => {
               </div>
               <div>
                 <p style={{ color: '#6b7280' }}>System Size</p>
-                <p style={{ fontWeight: '600' }}>{solarPotential.systemSize} kW</p>
+                <p style={{ fontWeight: '600' }}>{solarPotential.systemSizeKWp} kW</p>
               </div>
               <div>
                 <p style={{ color: '#6b7280' }}>Confidence</p>
@@ -323,6 +367,13 @@ const BuildingsMap = () => {
                 <p style={{ marginTop: '4px' }}>
                   <strong>Data Source:</strong> {solarPotential.irradianceSource}
                 </p>
+                {solarPotential.weatherForecast && (
+                  <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#f9fafb', borderRadius: '4px' }}>
+                    <p style={{ fontWeight: '600', marginBottom: '4px' }}>Weather Forecast:</p>
+                    <p>Next 24h: {solarPotential.weatherForecast.next_24h_generation} kWh</p>
+                    <p>Weather Score: {solarPotential.weatherForecast.weather_quality_score}/100</p>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -1,6 +1,6 @@
 # Toothless Solar Buildings Map
 
-A geospatial web application for analyzing rooftop solar photovoltaic potential on building footprints across Thailand using Google Open Buildings Dataset and physics-based solar modeling.
+A geospatial web application for analyzing rooftop solar photovoltaic potential on building footprints across Thailand using Google Open Buildings Dataset, physics-based solar modeling, and real-time weather forecasting.
 
 ## Overview
 
@@ -9,10 +9,53 @@ This application provides accurate solar energy potential assessments for buildi
 - **Google Open Buildings Dataset**: 107+ million building footprints with geometry and confidence scores
 - **BigQuery GIS**: High-performance spatial queries and geometry processing at scale
 - **pvlib-python**: Industry-standard photovoltaic system modeling library
+- **WxTech Weather API**: Real-time 5km resolution weather forecasts for enhanced solar analysis
 - **NASA POWER API**: Satellite-derived solar irradiance data for location-specific calculations
 - **Interactive Mapping**: Real-time visualization on satellite imagery with Leaflet
 
-The system calculates technical and financial feasibility metrics including system sizing, energy production estimates, installation costs, payback periods, and carbon emission reductions based on Thailand-specific parameters.
+The system calculates technical and financial feasibility metrics including system sizing, energy production estimates, installation costs, payback periods, and carbon emission reductions based on Thailand-specific parameters and real-time weather conditions.
+
+## New Features (March 2026)
+
+### Real-Time Weather Integration
+
+The application now includes real-time weather forecasting capabilities powered by WxTech 5km Global Weather Forecast API:
+
+**Weather Features**:
+- **Real-time Forecasts**: 72-hour hourly and 14-day daily weather predictions
+- **5km Resolution**: High-precision weather data for accurate local conditions
+- **Solar Impact Analysis**: Weather quality scoring (0-100) for solar generation
+- **Generation Forecasting**: 24-hour and 7-day solar output predictions
+- **Weather-Enhanced Calculations**: Dynamic solar potential based on current conditions
+
+**Weather Data Points**:
+- Solar radiation (W/m²)
+- Temperature and humidity
+- Precipitation and cloud cover
+- Wind speed and direction
+- Atmospheric pressure
+
+**Integration Benefits**:
+- More accurate solar generation estimates
+- Real-time performance optimization
+- Weather impact assessment
+- Seasonal planning capabilities
+- Risk evaluation for solar installations
+
+### Enhanced Solar Modeling
+
+**pvlib-python Integration**: Industry-standard photovoltaic modeling library providing:
+
+- **Physics-Based Calculations**: Astronomical algorithms for precise sun position
+- **Advanced Irradiance Modeling**: Clear sky models with atmospheric corrections
+- **Temperature Effects**: Cell temperature modeling with ambient conditions
+- **System Performance**: Comprehensive loss modeling and efficiency calculations
+- **Validation**: Research-grade accuracy comparable to commercial solar software
+
+**Calculation Hierarchy**:
+1. **Primary**: pvlib-python with weather enhancement
+2. **Secondary**: pvlib-python with historical data
+3. **Fallback**: Simplified empirical calculations
 
 ## Technical Architecture
 
@@ -27,7 +70,11 @@ The system calculates technical and financial feasibility metrics including syst
 **Key Features**:
 - Interactive map with pan and zoom
 - Building footprint visualization with polygon geometries
-- Click-to-analyze solar potential
+- Click-to-analyze solar potential with weather enhancement
+- Real-time weather forecast panel
+- Weather-enhanced solar generation forecasting
+- 24-hour and 7-day solar outlook
+- Weather impact scoring and risk assessment
 - Real-time data loading based on viewport bounds
 - Responsive design for desktop and mobile
 
@@ -36,16 +83,20 @@ The system calculates technical and financial feasibility metrics including syst
 **Framework**: FastAPI 0.109.0 (Python 3.11)  
 **Database**: Google Cloud BigQuery with spatial functions  
 **Solar Modeling**: pvlib-python 0.10.3+ for physics-based calculations  
+**Weather API**: WxTech 5km Global Weather Forecast API for real-time conditions  
 **Data Source**: NASA POWER API for location-specific irradiance  
 **Deployment**: Cloud Run serverless containers
 
 **API Endpoints**:
-- `GET /` - Health check
+- `GET /` - Health check and service information
 - `GET /stats` - Dataset statistics
 - `GET /buildings/bbox` - Query buildings by bounding box
 - `GET /buildings/nearby` - Query buildings by radius
 - `GET /buildings/{id}` - Get building details
-- `POST /solar/calculate` - Calculate solar potential with pvlib
+- `POST /solar/calculate` - Calculate solar potential with pvlib and weather enhancement
+- `GET /weather/forecast` - Get weather forecast for location
+- `GET /solar/forecast` - Get weather-enhanced solar generation forecast
+- `POST /test/mock-building` - Test weather-enhanced solar calculations
 
 ### Database
 
@@ -272,6 +323,31 @@ co2_reduction_tonnes_per_year = co2_reduction_kg_per_year / 1000
 **API**: https://power.larc.nasa.gov/api/temporal/monthly/point  
 **Documentation**: https://power.larc.nasa.gov/docs/
 
+### Weather Forecasting
+
+**Primary Source**: WxTech 5km Global Weather Forecast API  
+**Provider**: Weathernews Inc.  
+**Spatial Resolution**: 5 km mesh grid  
+**Temporal Resolution**: Hourly (72 hours) and daily (14 days)  
+**Update Frequency**: 4 times per day  
+**Coverage**: Global  
+**Data Points**: Solar radiation, temperature, precipitation, humidity, wind, pressure  
+**API**: https://wxtech.weathernews.com/api/v2/global/wx  
+
+**Weather Parameters**:
+- Solar radiation (W/m²) - Direct measurement for PV calculations
+- Temperature (°C) - For thermal derating of solar panels
+- Precipitation (mm/h, mm/day) - Weather impact assessment
+- Humidity (%) - Environmental conditions
+- Wind speed and direction - Cooling effects on panels
+- Atmospheric pressure (hPa) - Meteorological completeness
+
+**Integration Benefits**:
+- Real-time solar generation forecasting
+- Weather impact scoring for installation planning
+- Seasonal performance optimization
+- Risk assessment for solar investments
+
 ## System Requirements
 
 ### Minimum Requirements
@@ -308,7 +384,7 @@ pip install -r requirements.txt
 ```
 
 **Required Python packages**:
-- fastapi==0.109.0
+- fastapi==0.104.1
 - uvicorn[standard]==0.24.0
 - google-cloud-bigquery==3.14.1
 - python-dotenv==1.0.0
@@ -317,6 +393,11 @@ pip install -r requirements.txt
 - pandas==2.1.4
 - numpy==1.26.2
 - requests==2.31.0
+- aiohttp==3.9.1
+
+**Weather API Dependencies**:
+- aiohttp for asynchronous HTTP requests to WxTech API
+- python-dotenv for environment variable management
 
 ### 3. Frontend Setup
 
@@ -335,7 +416,13 @@ Create `backend/.env`:
 PROJECT_ID=your-gcp-project-id
 DATASET=openbuildings
 TABLE=thailand_raw
+WXTECH_API_KEY=your-wxtech-api-key
 ```
+
+**Weather API Configuration**:
+- WXTECH_API_KEY: Required for real-time weather forecasting
+- Obtain API key from WxTech Weather API service
+- API provides 5km resolution global weather data
 
 For production deployment, ensure the service account has:
 - `roles/bigquery.dataViewer`
@@ -433,6 +520,93 @@ npm run build
 
 ## API Endpoints
 
+### Weather Forecasting
+
+#### GET /weather/forecast
+
+**Description**: Retrieve real-time weather forecast for location
+
+**Parameters**:
+- `lat` (float, required): Latitude
+- `lon` (float, required): Longitude  
+- `timezone` (string, optional): Timezone (default: "Asia/Bangkok")
+
+**Response**:
+```json
+{
+  "location": {
+    "lat": 13.7563,
+    "lon": 100.5018,
+    "timezone": "Asia/Bangkok"
+  },
+  "impact_summary": {
+    "impact_level": "good",
+    "total_rain_24h": 0.0,
+    "rainy_hours": 0,
+    "max_temperature": 34,
+    "avg_temperature": 30.2,
+    "peak_solar_radiation": 1079,
+    "avg_solar_radiation": 321
+  },
+  "hourly_count": 73,
+  "daily_count": 15,
+  "fetched_at": "2026-03-30T12:00:00+07:00",
+  "next_24h_preview": [
+    {
+      "time": "2026-03-30T13:00:00+07:00",
+      "weather": "sunny",
+      "temp": 34,
+      "solar_radiation": 1079,
+      "rain": 0.0
+    }
+  ]
+}
+```
+
+#### GET /solar/forecast
+
+**Description**: Generate weather-enhanced solar generation forecast
+
+**Parameters**:
+- `lat` (float, required): Latitude
+- `lon` (float, required): Longitude
+- `system_kwp` (float, required): System size in kWp
+- `timezone` (string, optional): Timezone (default: "Asia/Bangkok")
+
+**Response**:
+```json
+{
+  "location": {
+    "lat": 13.7563,
+    "lon": 100.5018
+  },
+  "system_kwp": 5.0,
+  "next_24h_generation_kwh": 32.4,
+  "weather_quality_score": 40,
+  "avg_solar_radiation_24h": 321,
+  "hourly_forecast": [
+    {
+      "time": "2026-03-30T13:00:00+07:00",
+      "solar_radiation": 1079,
+      "temperature": 34,
+      "weather": "sunny",
+      "generation_kwh": 4.2,
+      "generation_factor": 0.85
+    }
+  ],
+  "weekly_outlook": [
+    {
+      "date": "2026-03-30",
+      "solar_radiation": 28.86,
+      "max_temp": 34,
+      "rain_probability": 0,
+      "estimated_generation": 25.8
+    }
+  ],
+  "analysis_time": "2026-03-30T12:00:00+07:00"
+}
+```
+
 ### Buildings Data
 
 #### GET /stats
@@ -515,7 +689,7 @@ npm run build
 
 #### POST /solar/calculate
 
-**Description**: Calculate solar potential using pvlib-python
+**Description**: Calculate solar potential using pvlib-python with weather enhancement
 
 **Request Body**:
 ```json
@@ -542,13 +716,26 @@ npm run build
   "co2_reduction_ton": 13.8,
   "irradiance_source": "pvlib (Clear Sky Model)",
   "irradiance_kwh_m2_day": 5.12,
+  "weather_forecast": {
+    "next_24h_generation": 58.4,
+    "weather_quality_score": 75,
+    "weekly_outlook": [
+      {
+        "date": "2026-03-30",
+        "estimated_generation": 25.8,
+        "solar_radiation": 28.86,
+        "max_temp": 34,
+        "rain_probability": 0
+      }
+    ]
+  },
   "assumptions": {
     "panel_efficiency": 0.20,
     "usable_roof_ratio": 0.50,
     "cost_per_wp": 25,
     "electricity_rate": 4.18,
     "co2_factor": 0.40,
-    "calculation_method": "pvlib"
+    "calculation_method": "pvlib_with_weather"
   }
 }
 ```
@@ -574,6 +761,16 @@ npm run build
 - Displayed buildings count
 - Total buildings in current view
 - Truncation notice if limit exceeded
+- Weather forecast toggle button
+
+#### Weather Forecast Panel (Left Side)
+
+Appears when weather button is activated:
+- Current location coordinates
+- Weather impact summary with color-coded severity
+- Current conditions (temperature, solar radiation, precipitation)
+- 12-hour hourly preview with weather icons
+- 7-day outlook with generation estimates
 
 #### Solar Potential Panel (Bottom Left)
 
@@ -585,8 +782,12 @@ Appears when building is selected:
 - Annual savings (THB)
 - Installation cost (THB)
 - Payback period (years)
-- CO₂ reduction (kg/year)
+- CO2 reduction (kg/year)
 - Solar irradiance value and data source
+- Weather-enhanced forecast (when available)
+  - Next 24-hour generation estimate
+  - Weather quality score (0-100)
+  - 7-day generation outlook
 
 #### Confidence Legend (Bottom Right)
 
@@ -815,6 +1016,7 @@ This project utilizes data and tools from:
 
 ---
 
-**Version**: 1.0.0  
+**Version**: 2.0.0  
 **Last Updated**: March 2026  
-**Tested On**: Windows 11, Node.js 18, Python 3.11, BigQuery
+**Tested On**: Windows 11, Node.js 18, Python 3.11, BigQuery  
+**New Features**: Real-time weather integration, pvlib-python solar modeling

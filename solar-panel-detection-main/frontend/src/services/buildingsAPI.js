@@ -3,7 +3,7 @@
  * Access to 1.88M building footprints from Google Open Buildings
  */
 
-const API_BASE_URL = process.env.REACT_APP_BUILDINGS_API_URL || 'http://localhost:8001';
+const API_BASE_URL = process.env.REACT_APP_BUILDINGS_API_URL || 'http://localhost:8080';
 const NASA_POWER_API = 'https://power.larc.nasa.gov/api/temporal/monthly/point';
 
 console.log('🔧 API Configuration:', {
@@ -346,7 +346,8 @@ export const calculateSolarPotentialPvlib = async (building) => {
       confidence: Math.round(building.confidence * 100),
       irradianceSource: data.irradiance_source,
       irradianceValue: data.irradiance_kwh_m2_day,
-      assumptionsUsed: data.assumptions
+      assumptionsUsed: data.assumptions,
+      weatherForecast: data.weather_forecast  // New weather data
     };
   } catch (error) {
     console.error('❌ Error calculating solar potential with pvlib:', error);

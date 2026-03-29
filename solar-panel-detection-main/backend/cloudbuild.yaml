@@ -1,0 +1,7 @@
+steps:
+- name: 'gcr.io/kaniko-project/executor:latest'
+  args:
+  - --dockerfile=Dockerfile.bigquery
+  - --destination=gcr.io/$PROJECT_ID/buildings-api-bq
+  - --cache=false
+  - --context=dir:///workspace

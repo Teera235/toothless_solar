@@ -1,15 +1,26 @@
 FROM python:3.11-slim
 
+# Build argument to force cache invalidation
+ARG CACHE_BUST=2026-03-30
+
 WORKDIR /app
 
-# Copy API file
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install system dependencies for numpy/pandas/pvlib
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy API files
 COPY api_bigquery.py .
+COPY weather_service.py .
+COPY .env .
 
-# Install dependencies
-RUN pip install --no-cache-dir \
-    fastapi==0.109.0 \
-    uvicorn[standard]==0.27.0 \
-    google-cloud-bigquery==3.14.1
-
-# Run
+# Run with weather support
 CMD ["uvicorn", "api_bigquery:app", "--host", "0.0.0.0", "--port", "8080"]
