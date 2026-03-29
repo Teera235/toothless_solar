@@ -1,0 +1,32 @@
+# Node modules
+node_modules/
+
+# Source files (we only need build/)
+src/
+public/
+
+# Config files
+.env
+.env.local
+.env.development
+.env.production
+package.json
+package-lock.json
+README.md
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Firebase
+.firebase/
+.firebaserc
+firebase.json
+
+# Other
+*.log
+.DS_Store
