@@ -88,6 +88,66 @@ def get_stats():
     except Exception as e:
         return {"error": str(e)}
 
+@app.get("/stats/distribution")
+def get_stats_distribution():
+    """Get confidence and area distribution for visualization (sampled for performance)"""
+    try:
+        # Sample 100K buildings for distribution analysis (faster than full scan)
+        query = f"""
+            WITH sampled AS (
+                SELECT 
+                    confidence,
+                    area_in_meters
+                FROM `{PROJECT_ID}.{DATASET}.{TABLE}`
+                WHERE RAND() < 0.001  -- Sample ~0.1% = ~100K buildings
+            )
+            SELECT
+                -- Confidence buckets
+                COUNTIF(confidence >= 0.5 AND confidence < 0.6) as conf_50_60,
+                COUNTIF(confidence >= 0.6 AND confidence < 0.7) as conf_60_70,
+                COUNTIF(confidence >= 0.7 AND confidence < 0.8) as conf_70_80,
+                COUNTIF(confidence >= 0.8 AND confidence < 0.9) as conf_80_90,
+                COUNTIF(confidence >= 0.9) as conf_90_100,
+                
+                -- Cumulative by threshold
+                COUNTIF(confidence >= 0.5) as cumulative_50,
+                COUNTIF(confidence >= 0.6) as cumulative_60,
+                COUNTIF(confidence >= 0.7) as cumulative_70,
+                COUNTIF(confidence >= 0.8) as cumulative_80,
+                COUNTIF(confidence >= 0.9) as cumulative_90,
+                
+                COUNT(*) as sample_size
+            FROM sampled
+        """
+        
+        result = list(bq_client.query(query).result())[0]
+        sample_size = int(result['sample_size'])
+        
+        # Scale up to full dataset (multiply by ~1000)
+        scale_factor = 107682789 / sample_size if sample_size > 0 else 1
+        
+        return {
+            "confidence_buckets": {
+                "0.5-0.6": int(result['conf_50_60'] * scale_factor),
+                "0.6-0.7": int(result['conf_60_70'] * scale_factor),
+                "0.7-0.8": int(result['conf_70_80'] * scale_factor),
+                "0.8-0.9": int(result['conf_80_90'] * scale_factor),
+                "0.9-1.0": int(result['conf_90_100'] * scale_factor)
+            },
+            "cumulative_by_threshold": {
+                "0.5": int(result['cumulative_50'] * scale_factor),
+                "0.6": int(result['cumulative_60'] * scale_factor),
+                "0.7": int(result['cumulative_70'] * scale_factor),
+                "0.8": int(result['cumulative_80'] * scale_factor),
+                "0.9": int(result['cumulative_90'] * scale_factor)
+            },
+            "sample_size": sample_size,
+            "estimated_total": 107682789,
+            "note": "Values are estimated from a random sample for performance"
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/buildings/bbox")
 def get_buildings_bbox(
     min_lat: float = Query(..., description="Minimum latitude"),

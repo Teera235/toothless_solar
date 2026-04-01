@@ -1,0 +1,21 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'build'
+      - '-f'
+      - 'Dockerfile.bigquery'
+      - '-t'
+      - 'gcr.io/trim-descent-452802-t2/solar-bigquery-api'
+      - '.'
+    
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'push'
+      - 'gcr.io/trim-descent-452802-t2/solar-bigquery-api'
+
+images:
+  - 'gcr.io/trim-descent-452802-t2/solar-bigquery-api'
+
+timeout: 1200s
